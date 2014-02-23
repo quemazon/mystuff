@@ -1,0 +1,144 @@
+int speed_current;
+int speed_target; 
+int speed_turn;
+int speed_ramp;
+#define REVERSE 1
+#define FORWARD 2
+#define BRAKE 3
+
+#define PWM_R 5
+#define PWM_L 10
+#define DIR_R1 6
+#define DIR_R2 7
+#define DIR_L1 8
+#define DIR_L2 9
+
+void updateSpeed(){
+	if ((speed_target - speed_current) > 0) speed_current += speed_ramp;
+	else speed_current -= speed_ramp;
+	
+	byte speed_right = speed_current - speed_turn;
+	byte speed_left = speed_current + speed_turn;
+	
+	if (speed_right < 0) dirRight(REV);
+	else dirRight(FORW);
+	if (speed_left < 0) dirLeft(REV);
+	else dirLeft(FORW);
+	
+	analogWrite(PWM_R, speed_right);
+	analogWrite(PWM_L, speed_left);
+}
+
+
+void dirRight(byte direction) {
+	switch (direction) {
+	case REV:
+		digitalWrite(DIR_R1, HIGH);
+		digitalWrite(DIR_R2, LOW);
+		break;
+	case FORW:
+		digitalWrite(DIR_R1, LOW);
+		digitalWrite(DIR_R2, HIGH);
+		break;
+	case BRAKE:
+		digitalWriet(DIR_R1, HIGH);
+		digitalWrite(DIR_R2, HIGH);
+		break;
+	}
+}
+
+void dirLeft(byte direction) {
+	switch (direction) {
+	case REV:
+		digitalWrite(DIR_L1, HIGH);
+		digitalWrite(DIR_L2, LOW);
+		break;
+	case FORW:
+		digitalWrite(DIR_L1, LOW);
+		digitalWrite(DIR_L2, HIGH);
+		break;
+	case BRAKE:
+		digitalWrite(DIR_L1, HIGH);
+		digitalWrite(DIR_L2, HIGH);
+		break;
+	}
+}
+
+byte searchHunt();
+	speed_current = 0;
+	speed_target = 0;
+	speed_turn = 30;
+	while(true) {
+		if (read_camera) return SEARCH_HONING;
+		if (read_long) return APPROACH;
+		//did the camera see anything?
+		//did the sensor_long see anything?
+	}
+
+void check_processes(){
+	if ((millis() - last_millis) >= 10) {
+		last_millis = millis();
+		updateGyro();
+		updateSpeed();
+	}
+}
+
+byte searchHoning(){
+	speed_current = 0;
+	speed_target = 0;
+	speed_turn = 0;
+	while(true) {
+		check_processes();
+		speed_turn = steer_gain * (angle_target - angle_current
+	}
+}
+
+boolean read_camera() {
+}
+
+boolean read_long() {
+}
+	
+void loop()
+{
+	//  readReflectorValues();
+	//  sensors.read(sensor_values);
+
+
+	switch (state) {
+	case SEARCH_HUNT:			//No sensors see anything. move until a sensor picks something up
+		state = searchHunt();
+		break;
+
+	case SEARCH_HONING:			//one of the sensors has seen something. 
+		state = lineDetected();
+		break;
+
+	case APPROACH:
+		state = lineDetectedAttackFront();
+		break;
+		
+	case ATTACK:
+		state = searchEnemy();
+		break;
+		
+	case LINE_DETECTED_RIGHT:
+		state = enemyLong();
+		break;
+		
+	case LINE_DETECTED_LEFT:
+		state = enemyLongRear();
+		break;
+		
+	case SWITCH_ATTACK:
+		state = switchAttack();
+		break;
+	case SWITCH_ATTACK_REAR:
+		state = switchAttackRear();
+		break;
+	case ATTACK_1:
+		state = attack1();
+		break;
+	}
+
+}

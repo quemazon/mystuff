@@ -1,0 +1,39 @@
+=AVC 2012 - Minuteman To Do List=
+----
+
+==Coding==
+----
+  # How do I correctly put in waypoints when the car servos are in full autonomous mode (i.e. ESC may also be controlled)? Car seems to jump around when I push the waypoint program button.
+  # Create routine to write array into EEPROM at the start of the sketch
+  # Create routine to check if radio is in specific setting at start of sketch. Make that setting determine if the pre-determined waypoints will be written into EEPROM or if the arduino will use the existing waypoints.
+  # Make LED on pin 13 light up when waypoint is accepted as a visual indicator that the button may be released
+  # Add menus to the LCD to enable easier programming of the car
+  # Create header file that allows easier sharing of code. The header file should include:
+    * any other items that may differ from one car to another
+    * ~~routine for initially printing out the "Minuteman!" / "***ROADRUNNER*** Beep! Beep!" statement~~
+    * ~~gyro calibration factor~~
+    * ~~tire calibration factor~~
+    * ~~calibration/adjustment factor to drive in a straight line~~
+  # ~~User inputted waypoints from excel do NOT need to be written into EEPROM~~
+  # ~~Switch the null print out of the LCD from "####null" to "Null: ####"~~
+  # ~~Increase waypoint accept time from .5-1.5 seconds to .5-2.5 seconds~~
+  # ~~Clean up the code by deleting all the old comments, LCD printouts, unused functions, unused variables, etc~~
+
+
+
+
+==Excel Spreadsheet==
+----
+  # Plot exported waypoints from car
+  # Plot new waypoints for car
+  # Add diagram showing location of barrels
+  # Add diagram showing accurate perimeter of Sparkfun building
+  # Add export function that formats a string that may easily be read into by arduino, that string does NOT need to be written into EEPROM
+  # Excel sheet should take into account the tire size calibration factor or put that in the header file
+
+
+==Hardware==
+----
+  # Calibrate gyro for different temperature ranges
+  # Create calibration factor for those temperature ranges
+  # Calibrate steering so that the car drives straight. Add that calibration factor into the header file.
