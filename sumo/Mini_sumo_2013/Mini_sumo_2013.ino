@@ -43,8 +43,8 @@
 #define SHARP_HERE		64
 
 //sensor limits
-#define SHARP_LIM_FAR	100
-#define SHARP_LIM_CLOSE	300
+#define SHARP_LIM_FAR	300
+#define SHARP_LIM_CLOSE	500
 
 
 #define NULL_FF -30
