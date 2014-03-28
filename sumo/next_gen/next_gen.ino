@@ -52,8 +52,8 @@
 #define RC_LINE 3
 
 //sensor limits
-#define SHARP_LIM_FAR	170
-#define SHARP_LIM_CLOSE	300
+#define SHARP_LIM_FAR	230
+#define SHARP_LIM_CLOSE	500
 #define WHITE_THRESHOLD	200
 
 //Initialize variables
@@ -63,7 +63,7 @@ long gyro_count = 0, gyro_null=0, accum=0, time=0, count, last_millis;
 double x=0, y=0;
 int angle_diff, angle_last, angle_target, angle_camera, angle=0;
 int speed_current, speed_target, speed_turn, speed_ramp, speed_right, speed_left, steer_gain;
-byte result, state, flags, timeout=0;
+byte result, state, front_flags, side_flags, timeout=0;
 
 //Initialize objects
 MPU6050 accelgyro;
@@ -84,6 +84,11 @@ void setSpeed(int speed, int turn){
 	escL.writeMicroseconds(temp);
 }
 
+void tartgetAngle(int setangle){
+	accum = 0;
+	angle_target = setangle;
+}
+
 byte read_front(){
 	byte flags = 0;
 	int temp = analogRead(FL_PIN);
@@ -93,8 +98,8 @@ byte read_front(){
 	else flags += FL_NONE;
 
 	temp = analogRead(FR_PIN);
-	if (temp > SHARP_LIM_CLOSE) flags += FR_NEAR;
-	else if (temp > SHARP_LIM_FAR) flags += FR_FAR;
+	if (temp > 500) flags += FR_NEAR;
+	else if (temp > 320) flags += FR_FAR;
 	else flags += FR_NONE;
 	return flags;
 }
@@ -114,41 +119,93 @@ byte read_side(){
 	return flags;
 }
 
-void decide(){
-	switch (read_front()) {
+void decide_front(){
+	switch (front_flags) {
     case FR_NEAR+FL_NEAR: 
       setSpeed(FAST_FORWARD, 0);//case 1
+	  accum = 0;
+	  //Serial.println("Straight");
       break;
     case FR_FAR+FL_NEAR:
       setSpeed(MEDIUM_FORWARD, -SLOW_TURN);//case 2
+	  //Serial.println("Straight");
+	  accum = 0;
       break;
     case FR_NONE+FL_NEAR:
       setSpeed(MEDIUM_FORWARD, -FAST_TURN);//case 3
+	  accum = -GYRO_CAL/180*10;
+	  //Serial.println("left");
       break;
     case FR_NEAR+FL_FAR:
       setSpeed(MEDIUM_FORWARD, SLOW_TURN);//case 4
+	  //Serial.println("Straight");
       break;
+	  accum = 0;
     case FR_FAR+FL_FAR:
       setSpeed(MEDIUM_FORWARD, 0);//case 5
+	  //Serial.println("Straight");
       break;
+	  accum = 0;
     case FR_NONE+FL_FAR:
       setSpeed(MEDIUM_FORWARD, -SLOW_TURN);//case 6
+	  accum = -GYRO_CAL/180*10;	  
+	  //Serial.println("left");
       break;
     case FR_NEAR+FL_NONE:
       setSpeed(MEDIUM_FORWARD, FAST_TURN);//case 7
+	  accum = GYRO_CAL/180*10;
+	  //Serial.println("right");
       break;
     case FR_FAR+FL_NONE:
       setSpeed(MEDIUM_FORWARD, SLOW_TURN);//case 8
+	  accum = GYRO_CAL/180*10;
+	  //Serial.println("right");
       break;
     case FR_NONE+FL_NONE:
-      setSpeed(0, SLOW_TURN);//case 9
-      break;
+	  //Serial.println(-SLOW_TURN - angle);
+	  if (accum > 0) setSpeed(0, -150);//case 9
+      else setSpeed(0, 150);
+	  break;
 	}
 }
 
-byte read_side();
+void follow_line(){
+	//setSpeed(150, -70);
+	while(true){
+		qtrrc.read(sensorValues);
+		if ((sensorValues[0] < 100) || (sensorValues[1] < 100)){
+			setSpeed(150,-120);
+		}
+		else setSpeed(250, -150);
+	}
+	
+}
 
-byte read_line(){
+void decide_side(){
+	switch (side_flags) {
+    case LEFT_NEAR+RIGHT_NONE: 
+	  accum = -GYRO_CAL/180*90;
+	  break;
+    case LEFT_FAR+RIGHT_NONE: 
+	  accum = -GYRO_CAL/180*90;
+	  break;
+    case RIGHT_NEAR+LEFT_NONE: 
+	  accum = GYRO_CAL/180*90;
+	  break;
+    case RIGHT_FAR+RIGHT_NONE: 
+	  accum = GYRO_CAL/180*90;
+	  break;
+	}
+}
+
+void decide_line(){
+	if ((sensorValues[0] < 100) || (sensorValues[1] < 100)){
+		setSpeed(-FAST_FORWARD, 0);
+		delay(200);
+	}
+}
+
+byte watch_line(){
 	qtrrc.read(sensorValues);
 	Serial.print(sensorValues[0]);
     Serial.print('\t');
@@ -156,6 +213,17 @@ byte read_line(){
     Serial.print('\t');
 	Serial.println(sensorValues[2]);
 	delay(250);
+}
+
+void watch_sensors(){
+	Serial.print(analogRead(0));
+	Serial.print("\t");
+	Serial.print(analogRead(1));
+	Serial.print("\t");
+	Serial.print(analogRead(2));
+	Serial.print("\t");
+	Serial.println(analogRead(3));
+	delay(300);
 }
 
 void watch_angle(){
@@ -223,8 +291,8 @@ void read_FIFO(){
 		accum -= temp + gyro_null;    
 		gyro_count++;
 		
-		if((accum > GYRO_CAL) && (!cal_flag)) accum -= GYRO_CAL*2; //if we are calculating null, don't roll-over
-		if((accum < -GYRO_CAL) && (!cal_flag)) accum += GYRO_CAL*2;
+		//if((accum > GYRO_CAL) && (!cal_flag)) accum -= GYRO_CAL*2; //if we are calculating null, don't roll-over
+		//if((accum < -GYRO_CAL) && (!cal_flag)) accum += GYRO_CAL*2;
 	}
 	//angle = (float)accum/(float)GYRO_CAL * -3.14159;   //change sign of PI for flipped gyro
 	angle = (float)accum/GYRO_CAL * -180;   //using degrees *10, negative for flipped gyro.
@@ -304,5 +372,16 @@ void setup(){
 }
 
 void loop(){
-	watch_angle();
+	//follow_line();
+	//watch_angle();
+	//watch_sensors();
+	qtrrc.read(sensorValues);
+	decide_line();
+	read_FIFO();
+	front_flags = read_front();
+	side_flags = read_side();
+	decide_side();
+	decide_front();
+	//Serial.println(accum);
+	//watch_line();
 }
