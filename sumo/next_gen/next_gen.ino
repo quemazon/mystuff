@@ -13,8 +13,8 @@
 #define ESC_NULL		1460
 
 //speed definitions
-#define FAST_TURN 100
-#define SLOW_TURN 80
+#define FAST_TURN 60    //100
+#define SLOW_TURN 60     //80
 #define FAST_FORWARD 254 
 #define SLOW_FORWARD 80
 #define MEDIUM_FORWARD 220
@@ -114,7 +114,7 @@ byte read_side(){
 
 	temp = analogRead(RIGHT_PIN);
 	if (temp > SHARP_LIM_CLOSE) flags += RIGHT_NEAR;
-	else if (temp > SHARP_LIM_FAR) flags += RIGHT_FAR;
+	else if (temp > 350) flags += RIGHT_FAR;
 	else flags += RIGHT_NONE;
 	return flags;
 }
@@ -124,41 +124,49 @@ void decide_front(){
     case FR_NEAR+FL_NEAR: 
       setSpeed(FAST_FORWARD, 0);//case 1
 	  accum = 0;
+	  timeout=millis();
 	  //Serial.println("Straight");
       break;
     case FR_FAR+FL_NEAR:
       setSpeed(MEDIUM_FORWARD, -SLOW_TURN);//case 2
 	  //Serial.println("Straight");
 	  accum = 0;
+	  timeout=millis();
       break;
     case FR_NONE+FL_NEAR:
       setSpeed(MEDIUM_FORWARD, -FAST_TURN);//case 3
-	  accum = GYRO_CAL/180*20;
+	  accum = GYRO_CAL/180*5;
+	  timeout=millis();
 	  //Serial.println("left");
       break;
     case FR_NEAR+FL_FAR:
       setSpeed(MEDIUM_FORWARD, SLOW_TURN);//case 4
+	  timeout=millis();
 	  //Serial.println("Straight");
-      break;
 	  accum = 0;
+      break;
     case FR_FAR+FL_FAR:
       setSpeed(MEDIUM_FORWARD, 0);//case 5
+	  timeout=millis();
 	  //Serial.println("Straight");
-      break;
 	  accum = 0;
+      break;
     case FR_NONE+FL_FAR:
       setSpeed(MEDIUM_FORWARD, -SLOW_TURN);//case 6
-	  accum = GYRO_CAL/180*20;	  
+	  accum = GYRO_CAL/180*5;	  
+	  timeout=millis();
 	  //Serial.println("left");
       break;
     case FR_NEAR+FL_NONE:
       setSpeed(MEDIUM_FORWARD, FAST_TURN);//case 7
-	  accum = -GYRO_CAL/180*20;
+	  accum = -GYRO_CAL/180*5;
+	  timeout=millis();
 	  //Serial.println("right");
       break;
     case FR_FAR+FL_NONE:
       setSpeed(MEDIUM_FORWARD, SLOW_TURN);//case 8
-	  accum = -GYRO_CAL/180*20;
+	  accum = -GYRO_CAL/180*5;
+	  timeout=millis();
 	  //Serial.println("right");
       break;
     case FR_NONE+FL_NONE:
@@ -185,15 +193,19 @@ void decide_side(){
 	switch (side_flags) {
     case LEFT_NEAR+RIGHT_NONE: 
 	  accum = GYRO_CAL/180*90;
+	  timeout=millis();
 	  break;
     case LEFT_FAR+RIGHT_NONE: 
 	  accum = GYRO_CAL/180*90;
+	  timeout=millis();
 	  break;
     case RIGHT_NEAR+LEFT_NONE: 
 	  accum = -GYRO_CAL/180*90;
+	  timeout=millis();
 	  break;
     case RIGHT_FAR+RIGHT_NONE: 
 	  accum = -GYRO_CAL/180*90;
+	  timeout=millis();
 	  break;
 	}
 }
@@ -375,17 +387,20 @@ void loop(){
 	//follow_line();
 	//watch_gyro();
 	//watch_sensors();
+	qtrrc.read(sensorValues);
+	decide_line();
 	if ((millis() - timeout) > 500){
 		accum = GYRO_CAL;
 		timeout = millis();
 	}
-	qtrrc.read(sensorValues);
-	decide_line();
-	read_FIFO();
-	front_flags = read_front();
-	side_flags = read_side();
-	decide_side();
-	decide_front();
+	if ((millis() - time) > 3){
+		time = millis();
+		read_FIFO();
+		front_flags = read_front();
+		side_flags = read_side();
+		decide_side();
+		decide_front();
+	}
 	//Serial.println(accum);
 	//watch_line();
 }
