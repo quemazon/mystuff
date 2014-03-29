@@ -1,7 +1,7 @@
 int turn_count = 0;
 boolean turn_direction = true;
 
-void go_fast() {
+void go_fast() {		// You have a different 
   analogWrite(2, 254);  // 
   analogWrite(7, 254);  //
 }
@@ -45,6 +45,8 @@ void rotate_left(){
   go_slow();
 }
 
+
+
 void reverse_rotation() {
 	turn_direction = !turn_direction;
 }
@@ -57,6 +59,7 @@ void setup()
   pinMode(5, OUTPUT);   // sets the pin as output
   pinMode(6, OUTPUT);   // sets the pin as output
   pinMode(7, OUTPUT);   // sets the pin as output
+  delay(3400);
 }
 
 void loop(){
@@ -66,7 +69,7 @@ void loop(){
 		turn_count++;
 	}
 	
-	if (analogRead(1) > 700) {
+	else if (analogRead(1) > 700) {
 		go_medium();
 		backward();
 		delay(300);

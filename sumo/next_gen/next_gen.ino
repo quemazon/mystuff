@@ -1,3 +1,6 @@
+/*
+
+*/
 #include <Servo.h>
 #include <Wire.h>
 #include <I2Cdev.h>
@@ -13,11 +16,11 @@
 #define ESC_NULL		1460
 
 //speed definitions
-#define FAST_TURN 60    //100
-#define SLOW_TURN 60     //80
+#define FAST_TURN 100    //100
+#define SLOW_TURN 80     //80
 #define FAST_FORWARD 254 
 #define SLOW_FORWARD 80
-#define MEDIUM_FORWARD 220
+#define MEDIUM_FORWARD 254
 
 //Pin definitions
 #define FL_PIN A1
@@ -52,9 +55,9 @@
 #define RC_LINE 3
 
 //sensor limits
-#define SHARP_LIM_FAR	200
+#define SHARP_LIM_FAR	210
 #define SHARP_LIM_CLOSE	350
-#define WHITE_THRESHOLD	200
+#define WHITE_THRESHOLD	80
 
 //Initialize variables
 unsigned int sensorValues[NUM_SENSORS];
@@ -135,7 +138,7 @@ void decide_front(){
       break;
     case FR_NONE+FL_NEAR:
       setSpeed(MEDIUM_FORWARD, -FAST_TURN);//case 3
-	  accum = GYRO_CAL/180*5;
+	  accum = GYRO_CAL/180*55;
 	  timeout=millis();
 	  //Serial.println("left");
       break;
@@ -210,10 +213,21 @@ void decide_side(){
 	}
 }
 
+void mydelay(int temp){
+	for (int i = 0; i < temp; i++) {
+		read_FIFO();
+		delay(1);
+	}
+}
+
 void decide_line(){
-	if ((sensorValues[0] < 100) || (sensorValues[1] < 100)){
+	if (sensorValues[0] < WHITE_THRESHOLD) {
 		setSpeed(-FAST_FORWARD, 0);
-		delay(200);
+		mydelay(70);
+	}
+	else if (sensorValues[1] < WHITE_THRESHOLD) {
+		setSpeed(-FAST_FORWARD, 0);
+		mydelay(70);
 	}
 }
 
@@ -380,7 +394,9 @@ void setup(){
 	escL.attach(L_ESC_PIN);
 	escR.writeMicroseconds(ESC_NULL);
 	escL.writeMicroseconds(ESC_NULL);
-	delay(1000);
+	pinMode(9, INPUT_PULLUP);
+	while(digitalRead(9));
+	delay(5000);
 }
 
 void loop(){
@@ -393,7 +409,7 @@ void loop(){
 		accum = GYRO_CAL;
 		timeout = millis();
 	}
-	if ((millis() - time) > 3){
+	if ((millis() - time) > 1){
 		time = millis();
 		read_FIFO();
 		front_flags = read_front();
