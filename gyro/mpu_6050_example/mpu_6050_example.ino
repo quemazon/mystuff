@@ -649,6 +649,7 @@ int accumulator;
 
 void setup()
 {      
+  delay(5000);
   int error;
   uint8_t c;
 
