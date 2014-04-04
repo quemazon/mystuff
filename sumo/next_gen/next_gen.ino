@@ -57,7 +57,7 @@
 //sensor limits
 #define SHARP_LIM_FAR	210
 #define SHARP_LIM_CLOSE	350
-#define WHITE_THRESHOLD	80
+#define WHITE_THRESHOLD	200
 
 //Initialize variables
 unsigned int sensorValues[NUM_SENSORS];
@@ -75,15 +75,16 @@ Servo escL;
 QTRSensorsRC qtrrc((unsigned char[]) {FR_LINE_PIN, FL_LINE_PIN, RC_LINE_PIN}, NUM_SENSORS, TIMEOUT, EMITTER_PIN); 
 
 void setSpeed(int speed, int turn){
+	Serial.println("speed");
 	int speed_right = speed - turn;
 	int speed_left = speed + turn;
 	
 	if (speed_right > 255) speed_right = 255;
 	if (speed_left > 255) speed_left = 255;
 	
-	int temp = (speed_right << 1) + ESC_NULL;
+	int temp = (speed_right * 2) + ESC_NULL;
 	escR.writeMicroseconds(temp);
-	temp = (speed_left << 1) + ESC_NULL;
+	temp = (speed_left * 2) + ESC_NULL;
 	escL.writeMicroseconds(temp);
 }
 
@@ -93,6 +94,7 @@ void tartgetAngle(int setangle){
 }
 
 byte read_front(){
+	//Serial.println("rfront");
 	byte flags = 0;
 	int temp = analogRead(FL_PIN);
 
@@ -108,6 +110,7 @@ byte read_front(){
 }
 
 byte read_side(){
+	//Serial.println("rside");
 	byte flags = 0;
 	int temp = analogRead(LEFT_PIN);
 
@@ -123,6 +126,7 @@ byte read_side(){
 }
 
 void decide_front(){
+	//Serial.println("dfront");
 	switch (front_flags) {
     case FR_NEAR+FL_NEAR: 
       setSpeed(FAST_FORWARD, 0);//case 1
@@ -193,6 +197,7 @@ void follow_line(){
 }
 
 void decide_side(){
+	//Serial.println("dside");
 	switch (side_flags) {
     case LEFT_NEAR+RIGHT_NONE: 
 	  accum = GYRO_CAL/180*90;
@@ -214,6 +219,7 @@ void decide_side(){
 }
 
 void mydelay(int temp){
+	//Serial.println("delay");
 	for (int i = 0; i < temp; i++) {
 		read_FIFO();
 		delay(1);
@@ -221,6 +227,7 @@ void mydelay(int temp){
 }
 
 void decide_line(){
+	//Serial.println("dline");
 	if (sensorValues[0] < WHITE_THRESHOLD) {
 		setSpeed(-FAST_FORWARD, 0);
 		mydelay(70);
@@ -229,6 +236,7 @@ void decide_line(){
 		setSpeed(-FAST_FORWARD, 0);
 		mydelay(70);
 	}
+	return;
 }
 
 byte watch_line(){
@@ -286,7 +294,8 @@ void calculate_null(){
 	accum = 0;				//reset the angle. angle will act as accumulator for null calculation
 	gyro_null = 0;			//make sure to not subract any nulls here
 	gyro_count = 0;
-
+	accelgyro.resetFIFO();
+	
 	while(gyro_count < 5000){
 		read_FIFO();
 		//delay(10);
@@ -305,16 +314,16 @@ void calculate_null(){
 }
 
 void read_FIFO(){
+	//Serial.println("FIFO");
 	uint8_t buffer[2];
 	long temp = 0;
 	int samplz = 0;
 	samplz = accelgyro.getFIFOCount() >> 1;
-	//Serial.println("FIFO_COUNTH : ");
 	//Serial.println(samplz,DEC);
 	for(int i=0; i < samplz; i++){
 		accelgyro.getFIFOBytes(buffer, 2);
 		temp = ((((int16_t)buffer[0]) << 8) | buffer[1]);
-		accum += temp - gyro_null;    
+		accum += temp;  // - gyro_null;    
 		gyro_count++;
 		
 		//if((accum > GYRO_CAL) && (!cal_flag)) accum -= GYRO_CAL*2; //if we are calculating null, don't roll-over
@@ -327,47 +336,58 @@ void read_FIFO(){
 }
 
 void setup_mpu6050(){
-	// initialize device
-	Serial.println("Initializing I2C devices...");
-	accelgyro.initialize();
+    // join I2C bus (I2Cdev library doesn't do this automatically)
+    #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+        Wire.begin();
+    #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+        Fastwire::setup(400, true);
+    #endif
 
-	// verify connection
-	Serial.println("Testing device connections...");
-	Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
-	
-	// reset device
-	Serial.println(F("\nResetting MPU6050..."));
-	accelgyro.reset();
-	delay(30); // wait after reset
+    // initialize device
+    Serial.println("Initializing I2C devices...");
+    accelgyro.initialize();
 
+    // verify connection
+    Serial.println("Testing device connections...");
+    Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
 
-	// disable sleep mode
-	Serial.println(F("Disabling sleep mode..."));
-	accelgyro.setSleepEnabled(false);
-
-	// get X/Y/Z gyro offsets
-	Serial.println(F("Reading gyro offset values..."));
-	int8_t xgOffset = accelgyro.getXGyroOffset();
-	int8_t ygOffset = accelgyro.getYGyroOffset();
-	int8_t zgOffset = accelgyro.getZGyroOffset();
-	Serial.print(F("X gyro offset = "));
-	Serial.println(xgOffset);
-	Serial.print(F("Y gyro offset = "));
-	Serial.println(ygOffset);
-	Serial.print(F("Z gyro offset = "));
-	Serial.println(zgOffset);
-
+    // use the code below to change accel/gyro offset values
+    accelgyro.setXGyroOffset(85);  //85
+    accelgyro.setYGyroOffset(-70);  //-70
+    accelgyro.setZGyroOffset(46);  //-22
+    Serial.print(accelgyro.getXAccelOffset()); Serial.print("\t"); // 
+    Serial.print(accelgyro.getYAccelOffset()); Serial.print("\t"); // 
+    Serial.print(accelgyro.getZAccelOffset()); Serial.print("\t"); // 
+    Serial.print(accelgyro.getXGyroOffset()); Serial.print("\t"); // 
+    Serial.print(accelgyro.getYGyroOffset()); Serial.print("\t"); // 
+    Serial.print(accelgyro.getZGyroOffset()); Serial.print("\t"); // 
+    Serial.print("\n");
+    
 	Serial.println(F("Setting clock source to Z Gyro..."));
 	accelgyro.setClockSource(MPU6050_CLOCK_PLL_ZGYRO);
+	//Serial.println(accelgyro.getClockSource(MPU6050_CLOCK_PLL_ZGYRO);
 
 	Serial.println(F("Setting sample rate to 200Hz..."));
 	accelgyro.setRate(0); // 1khz / (1 + 4) = 200 Hz
 
-	Serial.println(F("Setting DLPF bandwidth to 42Hz..."));
+ // *          |   ACCELEROMETER    |           GYROSCOPE
+ // * DLPF_CFG | Bandwidth | Delay  | Bandwidth | Delay  | Sample Rate
+ // * ---------+-----------+--------+-----------+--------+-------------
+ // * 0        | 260Hz     | 0ms    | 256Hz     | 0.98ms | 8kHz
+ // * 1        | 184Hz     | 2.0ms  | 188Hz     | 1.9ms  | 1kHz
+ // * 2        | 94Hz      | 3.0ms  | 98Hz      | 2.8ms  | 1kHz
+ // * 3        | 44Hz      | 4.9ms  | 42Hz      | 4.8ms  | 1kHz
+ // * 4        | 21Hz      | 8.5ms  | 20Hz      | 8.3ms  | 1kHz
+ // * 5        | 10Hz      | 13.8ms | 10Hz      | 13.4ms | 1kHz
+ // * 6        | 5Hz       | 19.0ms | 5Hz       | 18.6ms | 1kHz
+ // * 7        |   -- Reserved --   |   -- Reserved --   | Reserved
+
+	Serial.println(F("Setting DLPF bandwidth"));
 	accelgyro.setDLPFMode(MPU6050_DLPF_BW_42);
 
 	Serial.println(F("Setting gyro sensitivity to +/- 250 deg/sec..."));
 	accelgyro.setFullScaleGyroRange(MPU6050_GYRO_FS_250);
+	//accelgyro.setFullScaleGyroRange(0);  // 0=250, 1=500, 2=1000, 3=2000 deg/sec
 
 	Serial.println(F("Resetting FIFO..."));
 	accelgyro.resetFIFO();
@@ -375,7 +395,14 @@ void setup_mpu6050(){
 	Serial.println(F("Enabling FIFO..."));
 	accelgyro.setFIFOEnabled(true);
 	accelgyro.setZGyroFIFOEnabled(true);
-	
+	accelgyro.setXGyroFIFOEnabled(false);
+	accelgyro.setYGyroFIFOEnabled(false);
+	accelgyro.setAccelFIFOEnabled(false);
+	Serial.print("Z axis enabled?\t"); Serial.println(accelgyro.getZGyroFIFOEnabled());
+	Serial.print("x axis enabled?\t"); Serial.println(accelgyro.getXGyroFIFOEnabled());
+	Serial.print("y axis enabled?\t"); Serial.println(accelgyro.getYGyroFIFOEnabled());
+	Serial.print("accel enabled?\t"); Serial.println(accelgyro.getAccelFIFOEnabled());
+	accelgyro.resetFIFO();
 	return ;
 }
 
@@ -383,7 +410,6 @@ void setup(){
 	Wire.begin();
 	Serial.begin(115200);
 	setup_mpu6050();
-	calculate_null();
 	pinMode(R_ESC_PIN, OUTPUT);   // sets the pin as output
 	pinMode(L_ESC_PIN, OUTPUT);   // sets the pin as output
 	pinMode(FL_PIN, INPUT);   // sets the pin as input
@@ -396,7 +422,9 @@ void setup(){
 	escL.writeMicroseconds(ESC_NULL);
 	pinMode(9, INPUT_PULLUP);
 	while(digitalRead(9));
-	delay(5000);
+	//calculate_null();
+	delay(4900);
+	accelgyro.resetFIFO();
 }
 
 void loop(){

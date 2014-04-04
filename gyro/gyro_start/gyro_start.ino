@@ -1,10 +1,9 @@
-#include <Wire.h>
+#include <Wire.h>  // note, to make i2c run at 400kHz, change twi.h, line  #define TWI_FREQ 400000L
 #include <I2Cdev.h>
 #include <MPU6050.h>
 
 #define NULL_FF -30
 #define GYRO_CAL 235434205	//this has to be measured by rotating the gyro 360 deg. and reading the output
-
 boolean gyro_flag = false, cal_flag = false;
 long gyro_count = 0, gyro_null = 0, accum = 0, time=0;
 byte result, state, flags, timeout=0;
@@ -34,14 +33,14 @@ void watch_fifo(){
 		}
 		//accelgyro.getFIFOByte(buffer, 2);
 		if((millis()-time)> 250){
-			//temp2 = micros();
+			temp2 = micros();
 			//Serial.println(accelgyro.getFIFOCount());
-			//accelgyro.getFIFOBytes(buffer,10);			
-			//temp2 = micros() - temp2;
+			accelgyro.getFIFOBytes(buffer,10);			
+			temp2 = micros() - temp2;
 			// Serial.print(buffer[0]);
 			// Serial.print("  ");
 			// Serial.println(buffer[1]);
-			Serial.println(temp);
+			Serial.println(temp2);
 			time = millis();
 		}
 	}
@@ -129,9 +128,9 @@ void setup_mpu6050(){
     Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
 
     // use the code below to change accel/gyro offset values
-    accelgyro.setXGyroOffset(85);
-    accelgyro.setYGyroOffset(-70);
-    accelgyro.setZGyroOffset(-22);
+    accelgyro.setXGyroOffset(85);  //85
+    accelgyro.setYGyroOffset(-70);  //-70
+    accelgyro.setZGyroOffset(46);  //-22
     Serial.print(accelgyro.getXAccelOffset()); Serial.print("\t"); // 
     Serial.print(accelgyro.getYAccelOffset()); Serial.print("\t"); // 
     Serial.print(accelgyro.getZAccelOffset()); Serial.print("\t"); // 
@@ -185,7 +184,7 @@ void setup_mpu6050(){
 
 void setup() {
 	delay(3000);
-	Wire.begin();
+	Wire.begin(); 
 	Serial.begin(115200);
 	setup_mpu6050();
 	calculate_null();
