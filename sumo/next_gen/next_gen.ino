@@ -421,9 +421,9 @@ void setup(){
 	escR.writeMicroseconds(ESC_NULL);
 	escL.writeMicroseconds(ESC_NULL);
 	pinMode(9, INPUT_PULLUP);
-	while(digitalRead(9));
+	//while(digitalRead(9));
 	//calculate_null();
-	delay(4900);
+	delay(3200);
 	accelgyro.resetFIFO();
 }
 
